@@ -1,14 +1,11 @@
-#include <stdlib.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <iostream>
-#include <thread>
 #include <map>
-#include <filesystem>
 #include <algorithm>
 #include <list>
+#include <thread>
+
+#include <QDir>
+#include <QFileInfo>
 
 #include "processstat.h"
 #include "procstat.h"
@@ -30,23 +27,28 @@ int main(int argc, char *argv[])
         std::map<int, std::pair<ProcessStat::Ptr, ProcessStat::Ptr>> map;
         std::map<ProcessStat::Ptr, double> tmp;
 
-        for(auto& p: std::filesystem::directory_iterator("/proc")) {
-            if (!is_number(p.path().filename())) {
+        QDir procDir("/proc");
+        procDir.setFilter(QDir::Dirs);
+
+        QFileInfoList procList{ procDir.entryInfoList() };
+        for (const QFileInfo& info : procList) {
+            if (!is_number(info.fileName().toStdString())) {
                 continue;
             }
 
-            ProcessStat::Ptr process(new ProcessStat(p.path().filename()));
+            ProcessStat::Ptr process(new ProcessStat(info.fileName().toStdString()));
             map[process->pid].first = process;
         }
 
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        for(auto& p: std::filesystem::directory_iterator("/proc")) {
-            if (!is_number(p.path().filename())) {
+        procList = procDir.entryInfoList();
+        for (const QFileInfo& info : procList) {
+            if (!is_number(info.fileName().toStdString())) {
                 continue;
             }
 
-            ProcessStat::Ptr process(new ProcessStat(p.path().filename()));
+            ProcessStat::Ptr process(new ProcessStat(info.fileName().toStdString()));
             // 清理不存在的任务
             if (ProcessStat::Ptr t = map[process->pid].first) {
                 map[process->pid].second = process;
@@ -76,6 +78,7 @@ int main(int argc, char *argv[])
                         * 100
                         / static_cast<double>(total_time - total_cpu_time_)) };
             list[time_][pid] = usage;
+            std::cout << time_ << "," << pid << "," << it->second.second->name << "," << usage << std::endl;
         }
 
         total_cpu_time_ = total_time;
