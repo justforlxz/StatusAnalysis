@@ -7,6 +7,8 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <QString>
+#include <QStringList>
 
 class ProcessStat {
 public:
@@ -36,14 +38,36 @@ public:
         if (memFile.is_open()) {
             std::string line;
             while (std::getline(memFile, line)) {
-                if (line.compare(0, 6, "VmRSS:") == 0) {
-                    std::string kb;
-                    std::istringstream iss(line);
-                    iss >> kb >> kb;
-                    VmRSS = std::stoi(kb);
+                const QString line_ {QString::fromStdString(line).simplified() };
+                if (line_.startsWith("VmRSS:")) {
+                    VmRSS = QString(line_.split(":").last()).toInt();
                     break;
                 }
             }
+        }
+        else {
+            std::cout << "mem failed" << std::endl;
+        }
+
+        std::fstream ioFile;
+        ioFile.open("/proc/" + _pid + "/io", std::ios::in);
+        if (memFile.is_open()) {
+            std::string line;
+            while (std::getline(ioFile, line)) {
+                const QString line_ {QString::fromStdString(line).simplified() };
+                if (line_.startsWith("rchar:")) {
+                    ReadIO = QString(line_.split(":").last()).toDouble();
+                    continue;
+                }
+
+                if (line_.startsWith("wchar:")) {
+                    WriteIO = QString(line_.split(":").last()).toDouble();
+                    continue;
+                }
+            }
+        }
+        else {
+            std::cout << "io failed" << std::endl;
         }
     }
 
@@ -73,6 +97,8 @@ public:
 
     // memory
     int VmRSS;
+    long ReadIO;
+    long WriteIO;
 };
 
 #endif // PROCESSSTAT_H

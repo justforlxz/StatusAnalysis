@@ -77,8 +77,24 @@ int main(int argc, char *argv[])
                                 * diff(it->second.first, it->second.second)
                         * 100
                         / static_cast<double>(total_time - total_cpu_time_)) };
+            const long ReadIO{
+                it->second.second->ReadIO - it->second.first->ReadIO
+            };
+
+            const long WriteIO{
+                it->second.second->WriteIO - it->second.first->WriteIO
+            };
+
             list[time_][pid] = usage;
-            std::cout << time_ << "," << pid << "," << it->second.second->name << "," << usage << "," << it->second.second->VmRSS << std::endl;
+            std::cout
+            << time_ << ","
+            << pid << ","
+            << it->second.second->name << ","
+            << usage << ","
+            << it->second.second->VmRSS  << ","
+            << ReadIO << ","
+            << WriteIO
+            << std::endl;
         }
 
         total_cpu_time_ = total_time;
