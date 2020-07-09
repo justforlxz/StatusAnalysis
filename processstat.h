@@ -30,7 +30,7 @@ public:
                     >> nice >> num_threads >> zero >> start_time;
         }
         else {
-            std::cout << processPath << _pid << std::endl;
+            std::cerr << processPath << _pid << std::endl;
         }
 
         std::fstream memFile;
@@ -46,7 +46,7 @@ public:
             }
         }
         else {
-            std::cout << "mem failed" << std::endl;
+            std::cerr << "mem failed" << std::endl;
         }
 
         std::fstream ioFile;
@@ -67,7 +67,7 @@ public:
             }
         }
         else {
-            std::cout << "io failed" << std::endl;
+            std::cerr << "io failed" << std::endl;
         }
     }
 
