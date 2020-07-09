@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 class ProcessStat {
 public:
@@ -28,6 +29,21 @@ public:
         }
         else {
             std::cout << processPath << _pid << std::endl;
+        }
+
+        std::fstream memFile;
+        memFile.open("/proc/" + _pid + "/status", std::ios::in);
+        if (memFile.is_open()) {
+            std::string line;
+            while (std::getline(memFile, line)) {
+                if (line.compare(0, 6, "VmRSS:") == 0) {
+                    std::string kb;
+                    std::istringstream iss(line);
+                    iss >> kb >> kb;
+                    VmRSS = std::stoi(kb);
+                    break;
+                }
+            }
         }
     }
 
@@ -54,6 +70,9 @@ public:
     int num_threads;
     int zero;
     unsigned long long start_time;
+
+    // memory
+    int VmRSS;
 };
 
 #endif // PROCESSSTAT_H

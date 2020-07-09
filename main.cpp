@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
                         * 100
                         / static_cast<double>(total_time - total_cpu_time_)) };
             list[time_][pid] = usage;
-            std::cout << time_ << "," << pid << "," << it->second.second->name << "," << usage << std::endl;
+            std::cout << time_ << "," << pid << "," << it->second.second->name << "," << usage << "," << it->second.second->VmRSS << std::endl;
         }
 
         total_cpu_time_ = total_time;
