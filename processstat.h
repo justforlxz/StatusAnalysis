@@ -40,7 +40,7 @@ public:
             while (std::getline(memFile, line)) {
                 const QString line_ {QString::fromStdString(line).simplified() };
                 if (line_.startsWith("VmRSS:")) {
-                    VmRSS = QString(line_.split(":").last()).toInt();
+                    VmRSS = QString(line_.split(":").last()).toUInt();
                     break;
                 }
             }
@@ -96,7 +96,7 @@ public:
     unsigned long long start_time;
 
     // memory
-    int VmRSS;
+    uint VmRSS;
     long ReadIO;
     long WriteIO;
 };

@@ -6,6 +6,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <unistd.h>
 
 #include "processstat.h"
 #include "procstat.h"
@@ -20,6 +21,8 @@ int main(int argc, char *argv[])
 {
     int total_cpu_time_ = 0;
     std::map<time_t, std::map<int, double>> list;
+
+    const int pid = getpid();
 
     while (true) {
         const int total_time{ total_cpu_time()};
@@ -36,6 +39,10 @@ int main(int argc, char *argv[])
                 continue;
             }
 
+            if (info.fileName().toInt() < pid) {
+                continue;
+            }
+
             ProcessStat::Ptr process(new ProcessStat(info.fileName().toStdString()));
             map[process->pid].first = process;
         }
@@ -45,6 +52,10 @@ int main(int argc, char *argv[])
         procList = procDir.entryInfoList();
         for (const QFileInfo& info : procList) {
             if (!is_number(info.fileName().toStdString())) {
+                continue;
+            }
+
+            if (info.fileName().toInt() < pid) {
                 continue;
             }
 
@@ -85,16 +96,18 @@ int main(int argc, char *argv[])
                 it->second.second->WriteIO - it->second.first->WriteIO
             };
 
-            list[time_][pid] = usage;
-            std::cout
-            << time_ << ","
-            << pid << ","
-            << it->second.second->name << ","
-            << usage << ","
-            << it->second.second->VmRSS  << ","
-            << ReadIO << ","
-            << WriteIO
-            << std::endl;
+            if (!it->second.second->name.empty()) {
+                list[time_][pid] = usage;
+                std::cout
+                << time_ << ","
+                << pid << ","
+                << it->second.second->name << ","
+                << usage << ","
+                << it->second.second->VmRSS  << ","
+                << ReadIO << ","
+                << WriteIO
+                << std::endl;
+            }
         }
 
         total_cpu_time_ = total_time;

@@ -17,7 +17,6 @@ REQUIRED)
 
 set(SRCS
     processstat.h
-    processstat.cpp
     procstat.h
 )
 
