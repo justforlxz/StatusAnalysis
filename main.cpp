@@ -8,8 +8,11 @@
 #include <QFileInfo>
 #include <unistd.h>
 
-#include "processstat.h"
-#include "procstat.h"
+#include <QFile>
+#include <QTextStream>
+
+#include "processstat.hpp"
+#include "procstat.hpp"
 
 bool is_number(const std::string& s)
 {
@@ -19,6 +22,14 @@ bool is_number(const std::string& s)
 
 int main(int argc, char *argv[])
 {
+    QFile file("/tmp/analysis.csv");
+    if (!file.open(QIODevice::Text | QIODevice::WriteOnly)) {
+        qErrnoWarning("cannot create file!");
+        return -1;
+    }
+
+    QTextStream stream(&file);
+
     int total_cpu_time_ = 0;
     std::map<time_t, std::map<int, double>> list;
 
@@ -39,9 +50,9 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (info.fileName().toInt() < pid) {
-                continue;
-            }
+            // if (info.fileName().toInt() < pid) {
+            //     continue;
+            // }
 
             ProcessStat::Ptr process(new ProcessStat(info.fileName().toStdString()));
             map[process->pid].first = process;
@@ -107,6 +118,17 @@ int main(int argc, char *argv[])
                 << ReadIO << ","
                 << WriteIO
                 << std::endl;
+
+                stream << QString("%1,%2,%3,%4,%5,%6,%7")
+                              .arg(time_)
+                              .arg(pid)
+                              .arg(QString::fromStdString(it->second.second->name))
+                              .arg(usage)
+                              .arg(QString::number(it->second.second->VmRSS))
+                              .arg(ReadIO)
+                              .arg(WriteIO)
+                       << "\n";
+                stream.flush();
             }
         }
 

@@ -16,8 +16,8 @@ REQUIRED)
 
 
 set(SRCS
-    processstat.h
-    procstat.h
+    processstat.hpp
+    procstat.hpp
 )
 
 add_executable(${PROJECT_NAME} "main.cpp" ${SRCS})
