@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     QCoreApplication app(argc, argv);
     QCommandLineParser parser;
     QCommandLineOption csvOption("c", "csv file path", "csv");
-    QCommandLineOption intervalOption("i", "The sampling interval", "interval", "1");
+    QCommandLineOption intervalOption("i", "The sampling interval, milliseconds", "interval", "1000");
     QCommandLineOption pidOption("pid", "Sampling procedure", "pid");
     QCommandLineOption samplingAll("all", "sampling all program");
     QCommandLineOption debugOption("d", "enable debug mode", "debug");
@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
     const bool isAll = parser.isSet(samplingAll);
     const bool isSetPid = parser.isSet(pidOption);
     const bool isDebug = parser.isSet(debugOption);
+    const long interval = parser.value(intervalOption).toLong();
 
     if (arguments.isEmpty() && !isAll && !isSetPid) {
         qErrnoWarning("not set sampling action. all or pid.");
@@ -107,7 +108,7 @@ int main(int argc, char *argv[])
             map[process->pid].first = process;
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval));
 
         procList = procDir.entryInfoList();
         for (const QFileInfo& info : procList) {
