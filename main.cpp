@@ -7,12 +7,18 @@
 #include <QDir>
 #include <QFileInfo>
 #include <unistd.h>
+#include <QDebug>
 
 #include <QFile>
 #include <QTextStream>
 
+#include <QCoreApplication>
+#include <QCommandLineParser>
+
 #include "processstat.hpp"
 #include "procstat.hpp"
+
+// 二进制路径+pid作为一个进程的跟踪记录
 
 bool is_number(const std::string& s)
 {
@@ -22,7 +28,36 @@ bool is_number(const std::string& s)
 
 int main(int argc, char *argv[])
 {
-    QFile file("/tmp/analysis.csv");
+    QCoreApplication app(argc, argv);
+    QCommandLineParser parser;
+    QCommandLineOption csvOption("c", "csv file path", "csv");
+    QCommandLineOption intervalOption("i", "The sampling interval", "interval", "1");
+    QCommandLineOption pidOption("pid", "Sampling procedure", "pid");
+    QCommandLineOption samplingAll("all", "sampling all program");
+    QCommandLineOption debugOption("d", "enable debug mode", "debug");
+    parser.addHelpOption();
+    parser.addOption(csvOption);
+    parser.addOption(intervalOption);
+    parser.addOption(pidOption);
+    parser.addOption(samplingAll);
+    parser.addOption(debugOption);
+    parser.process(app);
+
+    if (!parser.isSet(csvOption)) {
+        qErrnoWarning("not set csv file path.");
+        return -1;
+    }
+
+    const bool isAll = parser.isSet(samplingAll);
+    const bool isSetPid = parser.isSet(pidOption);
+    const bool isDebug = parser.isSet(debugOption);
+
+    if (!isAll && !isSetPid) {
+        qErrnoWarning("not set sampling action. all or pid.");
+        return -1;
+    }
+
+    QFile file(parser.value(csvOption));
     if (!file.open(QIODevice::Text | QIODevice::WriteOnly)) {
         qErrnoWarning("cannot create file!");
         return -1;
@@ -50,9 +85,9 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            // if (info.fileName().toInt() < pid) {
-            //     continue;
-            // }
+            if (!isAll && info.fileName() != parser.value(pidOption)) {
+                continue;
+            }
 
             ProcessStat::Ptr process(new ProcessStat(info.fileName().toStdString()));
             map[process->pid].first = process;
@@ -66,7 +101,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (info.fileName().toInt() < pid) {
+            if (!isAll && info.fileName() != parser.value(pidOption)) {
                 continue;
             }
 
@@ -109,15 +144,18 @@ int main(int argc, char *argv[])
 
             if (!it->second.second->name.empty()) {
                 list[time_][pid] = usage;
-                std::cout
-                << time_ << ","
-                << pid << ","
-                << it->second.second->name << ","
-                << usage << ","
-                << it->second.second->VmRSS  << ","
-                << ReadIO << ","
-                << WriteIO
-                << std::endl;
+
+                if (isDebug) {
+                    std::cout
+                            << time_ << ","
+                            << pid << ","
+                            << it->second.second->name << ","
+                            << usage << ","
+                            << it->second.second->VmRSS  << ","
+                            << ReadIO << ","
+                            << WriteIO
+                            << std::endl;
+                }
 
                 stream << QString("%1,%2,%3,%4,%5,%6,%7")
                               .arg(time_)
