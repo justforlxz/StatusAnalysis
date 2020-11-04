@@ -8,6 +8,7 @@ import getopt
 import datetime
 import csv
 
+
 def main(argv):
     csvfile = ''
     pid = []
@@ -47,31 +48,30 @@ def main(argv):
                 pid.append(str(int(row[1])))
             pid = list(set(pid))
 
-    with open(csvfile, newline='') as file:
-        line = pygal.Line()
-        for n in pid:
-            tmp_list = []
-            time_list = []
-            name_ = ""
-            lastReadIO = 0
-            lastWriteIO = 0
-            isFind = False
-            spamreader = csv.reader(file, delimiter=",")
-            for row in spamreader:
+    line = pygal.Line()
+    for n in pid:
+        tmp_list = []
+        time_list = []
+        name_ = ""
+        lastReadIO = 0
+        lastWriteIO = 0
+        isFind = False
+        with open(csvfile, newline='') as file:
+            for row in csv.reader(file, delimiter=","):
                 time = int(row[0])
-                pid = str(int(row[1]))
+                p = str(int(row[1]))
                 name = row[2]
                 cpu_usage = float(row[3])
                 vmrss = row[4]
                 readio = row[5]
                 writeio = row[6]
 
-                if cpu_usage < 1:
+                if cpu_usage < 0:
                     continue
 
                 time_list.append(datetime.datetime.fromtimestamp(time))
 
-                if (pid == str(n)):
+                if (p == n):
                     tmp_list.append(cpu_usage)
                     name_ = name
                     lastReadIO = readio
@@ -84,11 +84,11 @@ def main(argv):
                 line.add(name_, tmp_list)
                 line.x_labels = time_list
 
-        line.legend_at_bottom = True
-        if type == "svg":
-            line.render_to_file(outputfile)
-        if  type == "png":
-            line.render_to_png(outputfile)
+    line.legend_at_bottom = True
+    if type == "svg":
+        line.render_to_file(outputfile)
+    if type == "png":
+        line.render_to_png(outputfile)
 
 
 if __name__ == "__main__":

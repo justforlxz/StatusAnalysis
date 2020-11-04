@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
         process->setArguments(list + arguments);
         process->start();
         pid = QString::number(process->pid());
+//        QObject::connect(process, static_cast<void (QProcess::*)(int)>(&QProcess::finished), qApp, &QCoreApplication::quit);
     }
     else {
         pid = parser.value(pidOption);
