@@ -8,7 +8,7 @@
 #include <QFileInfo>
 #include <unistd.h>
 #include <QDebug>
-
+#include <QProcess>
 #include <QFile>
 #include <QTextStream>
 
@@ -43,6 +43,8 @@ int main(int argc, char *argv[])
     parser.addOption(debugOption);
     parser.process(app);
 
+    QStringList arguments = parser.positionalArguments();
+
     if (!parser.isSet(csvOption)) {
         qErrnoWarning("not set csv file path.");
         return -1;
@@ -52,7 +54,7 @@ int main(int argc, char *argv[])
     const bool isSetPid = parser.isSet(pidOption);
     const bool isDebug = parser.isSet(debugOption);
 
-    if (!isAll && !isSetPid) {
+    if (arguments.isEmpty() && !isAll && !isSetPid) {
         qErrnoWarning("not set sampling action. all or pid.");
         return -1;
     }
@@ -68,7 +70,19 @@ int main(int argc, char *argv[])
     int total_cpu_time_ = 0;
     std::map<time_t, std::map<int, double>> list;
 
-    const int pid = getpid();
+    QString pid;
+
+    if (!arguments.isEmpty()) {
+        QProcess* process = new QProcess;
+        QStringList list = arguments.takeFirst().split(" ");
+        process->setProgram(list.takeFirst());
+        process->setArguments(list + arguments);
+        process->start();
+        pid = QString::number(process->pid());
+    }
+    else {
+        pid = parser.value(pidOption);
+    }
 
     while (true) {
         const int total_time{ total_cpu_time()};
@@ -85,7 +99,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (!isAll && info.fileName() != parser.value(pidOption)) {
+            if (!isAll && info.fileName() != pid) {
                 continue;
             }
 
@@ -101,7 +115,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (!isAll && info.fileName() != parser.value(pidOption)) {
+            if (!isAll && info.fileName() != pid) {
                 continue;
             }
 
