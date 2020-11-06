@@ -7,6 +7,7 @@ import string
 import getopt
 import datetime
 import csv
+from numpy import *
 
 class CSVClass:
     time = 0
@@ -58,6 +59,7 @@ def main(argv):
                 pids = list(set(pids))
 
     data = {}
+    result = {}
     for csvfile in csvfiles:
         with open(csvfile, newline='') as file:
             spamreader = csv.reader(file, delimiter=",")
@@ -67,43 +69,44 @@ def main(argv):
                 csvObj = row
                 array.append(csvObj)
             data[csvfile] = array
-
-    result = {}
+            result[csvfile] = []
 
     line = pygal.Line()
     time_list = []
     # for n in pids:
     tmp_list = []
     index = 0
+    rec_csvfiles = csvfiles
+    firstTime = {}
     while (True):
-        if len(data) == 0:
+        if len(rec_csvfiles) == 0:
             break
-        tmp_list = []
-        lastTime = 0
+        times = []
         for key in data.keys():
             value = data[key]
             if (len(value) <= index):
+                if key in rec_csvfiles:
+                    rec_csvfiles.remove(key)
+                continue
+            cpu_usage = float(value[index][3])
+            if not key in firstTime:
+                firstTime[key] = float(value[index][0])
+            times.append(float(value[index][0]) - firstTime[key])
+            p = str(int(value[index][1]))
+            tmp_list = []
+            tmp_list.extend(result[key])
+            tmp_list.append(cpu_usage)
+            result[key] = tmp_list
+        for key in data.keys():
+            if not key in rec_csvfiles:
                 data.pop(key)
                 break
-            cpu_usage = float(value[index][3])
-            if cpu_usage < 1:
-                continue
-            lastTime = int(value[index][0])
-            p = str(int(value[index][1]))
-            tmp_list.append(cpu_usage)
-            if not key in result.keys():
-                result[key] = tmp_list
-            else:
-                tmp = []
-                tmp.extend(result[key])
-                tmp.extend(tmp_list)
-                result[key] = tmp
-        time_list.append(datetime.datetime.fromtimestamp(lastTime))
+        time_list.append(mean(times))
         index += 1
 
     for key in result.keys():
         line.add(key, result[key])
-    line.x_labels = time_list[int(len(time_list) / 2):len(time_list)]
+    line.x_labels = time_list
 
     line.legend_at_bottom = True
     if type == "svg":
