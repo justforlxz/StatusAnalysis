@@ -33,6 +33,9 @@ public:
             std::cerr << processPath << _pid << std::endl;
         }
 
+        QFileInfo exeInfo(QString("/proc/%1/exe").arg(_pid));
+        name = exeInfo.symLinkTarget().toStdString();;
+
         std::fstream memFile;
         memFile.open("/proc/" + _pid + "/status", std::ios::in);
         if (memFile.is_open()) {
