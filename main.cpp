@@ -86,6 +86,8 @@ int main(int argc, char *argv[])
         pid = parser.value(pidOption);
     }
 
+    const int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+
     while (true) {
         const int total_time{ total_cpu_time()};
         time_t time_ = time(nullptr);
@@ -137,7 +139,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            constexpr auto add = [](const ProcessStat::Ptr& ptr) -> long {
+            constexpr auto add = [](const ProcessStat::Ptr &ptr) -> unsigned long long{
                 return ptr->utime + ptr->stime + ptr->cutime + ptr->cstime;
             };
 
@@ -146,10 +148,11 @@ int main(int argc, char *argv[])
             };
 
             const int pid = it->second.second->pid;
-            const double usage{ (8
-                                * diff(it->second.first, it->second.second)
-                        * 100
-                        / static_cast<double>(total_time - total_cpu_time_)) };
+            const double usage {(num_cpus
+                                 * diff(it->second.first, it->second.second)
+                                 * 100
+                                 / static_cast<unsigned long long>(total_time - total_cpu_time_))};
+
             const long ReadIO{
                 it->second.second->ReadIO - it->second.first->ReadIO
             };

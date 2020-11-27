@@ -33,8 +33,8 @@ public:
             std::cerr << processPath << _pid << std::endl;
         }
 
-        QFileInfo exeInfo(QString("/proc/%1/exe").arg(_pid));
-        name = exeInfo.symLinkTarget().toStdString();;
+        QFileInfo exeInfo(QString("/proc/%1/exe").arg(QString::fromStdString(_pid)));
+        name = exeInfo.symLinkTarget().toStdString();
 
         std::fstream memFile;
         memFile.open("/proc/" + _pid + "/status", std::ios::in);
@@ -90,10 +90,10 @@ public:
     int cmaj_flt;
     int priority;
     int nice;
-    long utime;
-    long stime;
-    long cutime;
-    long cstime;
+    unsigned long long utime;
+    unsigned long long stime;
+    unsigned long long cutime;
+    unsigned long long cstime;
     int num_threads;
     int zero;
     unsigned long long start_time;
