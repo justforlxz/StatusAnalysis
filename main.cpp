@@ -68,7 +68,6 @@ int main(int argc, char *argv[])
 
     QTextStream stream(&file);
 
-    int total_cpu_time_ = 0;
     std::map<time_t, std::map<int, double>> list;
 
     QString pid;
@@ -89,7 +88,8 @@ int main(int argc, char *argv[])
     const int num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
     while (true) {
-        const int total_time{ total_cpu_time()};
+        const CPUTime cpu1;
+
         time_t time_ = time(nullptr);
         std::map<int, std::pair<ProcessStat::Ptr, ProcessStat::Ptr>> map;
         std::map<ProcessStat::Ptr, double> tmp;
@@ -112,6 +112,8 @@ int main(int argc, char *argv[])
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+
+        const CPUTime cpu2;
 
         procList = procDir.entryInfoList();
         for (const QFileInfo& info : procList) {
@@ -148,10 +150,14 @@ int main(int argc, char *argv[])
             };
 
             const int pid = it->second.second->pid;
-            const double usage {(num_cpus
-                                 * diff(it->second.first, it->second.second)
-                                 * 100
-                                 / static_cast<unsigned long long>(total_time - total_cpu_time_))};
+            const unsigned long totalCPUTime = cpu2.totalTime() - cpu1.totalTime();
+            const unsigned long idle = cpu2.idle - cpu1.idle;
+            // cpu的总体使用率
+            const unsigned long totalCPUUse = (totalCPUTime - idle) / totalCPUTime;
+
+            // 计算进程的使用时间
+            const unsigned long processTime = diff(it->second.first, it->second.second);
+            const double processCPUUse = processTime / totalCPUUse;
 
             const long ReadIO{
                 it->second.second->ReadIO - it->second.first->ReadIO
@@ -162,25 +168,25 @@ int main(int argc, char *argv[])
             };
 
             if (!it->second.second->name.empty()) {
-                list[time_][pid] = usage;
+                list[time_][pid] = processCPUUse;
 
                 if (isDebug) {
                     std::cout
-                            << time_ << ","
-                            << pid << ","
-                            << it->second.second->name << ","
-                            << usage << ","
-                            << it->second.second->VmRSS  << ","
-                            << ReadIO << ","
-                            << WriteIO
-                            << std::endl;
+                        << time_ << ","
+                        << pid << ","
+                        << it->second.second->name << ","
+                        << processCPUUse << ","
+                        << it->second.second->VmRSS << ","
+                        << ReadIO << ","
+                        << WriteIO
+                        << std::endl;
                 }
 
                 stream << QString("%1,%2,%3,%4,%5,%6,%7")
                               .arg(time_)
                               .arg(pid)
                               .arg(QString::fromStdString(it->second.second->name))
-                              .arg(usage)
+                              .arg(processCPUUse)
                               .arg(QString::number(it->second.second->VmRSS))
                               .arg(ReadIO)
                               .arg(WriteIO)
@@ -188,8 +194,6 @@ int main(int argc, char *argv[])
                 stream.flush();
             }
         }
-
-        total_cpu_time_ = total_time;
     }
 
     return 0;
