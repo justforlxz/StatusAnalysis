@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     QCoreApplication app(argc, argv);
     QCommandLineParser parser;
     QCommandLineOption csvOption("c", "csv file path", "csv");
-    QCommandLineOption intervalOption("i", "The sampling interval, milliseconds", "interval", "1000");
+    QCommandLineOption intervalOption("i", "The sampling interval, seconds", "interval", "5");
     QCommandLineOption pidOption("pid", "Sampling procedure", "pid");
     QCommandLineOption samplingAll("all", "sampling all program");
     QCommandLineOption debugOption("d", "enable debug mode", "debug");
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     const bool isAll = parser.isSet(samplingAll);
     const bool isSetPid = parser.isSet(pidOption);
     const bool isDebug = parser.isSet(debugOption);
-    const long interval = parser.value(intervalOption).toLong();
+    const uint interval = parser.value(intervalOption).toUInt();
 
     if (arguments.isEmpty() && !isAll && !isSetPid) {
         qErrnoWarning("not set sampling action. all or pid.");
@@ -107,93 +107,32 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            ProcessStat::Ptr process(new ProcessStat(info.fileName().toStdString()));
-            map[process->pid].first = process;
-        }
+            ProcessStat stat(info.fileName().toStdString());
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-
-        const CPUTime cpu2;
-
-        procList = procDir.entryInfoList();
-        for (const QFileInfo& info : procList) {
-            if (!is_number(info.fileName().toStdString())) {
+            if (stat.name.empty()) {
                 continue;
             }
 
-            if (!isAll && info.fileName() != pid) {
-                continue;
-            }
+            constexpr auto add = [](ProcessStat stat) -> unsigned long long {
+                return stat.utime + stat.stime + stat.cutime + stat.cstime;
+            };
 
-            ProcessStat::Ptr process(new ProcessStat(info.fileName().toStdString()));
-            // 清理不存在的任务
-            if (ProcessStat::Ptr t = map[process->pid].first) {
-                map[process->pid].second = process;
-            }
-            else {
-                map.erase(process->pid);
-            }
+            const QString &result {
+                QString("%1,%2,%3,%4")
+                    .arg(time_)
+                    .arg(info.fileName())
+                    .arg(QString::fromStdString(stat.name))
+                    .arg(QString::number(add(stat)))};
+
+            stream
+                << result
+                << "\n";
+
+            qDebug() << result;
+            stream.flush();
         }
 
-        // 已经得到两个差异
-        for (auto it = map.begin(); it != map.end(); ++it) {
-            if (!it->second.second) {
-                continue;
-            }
-
-            constexpr auto add = [](const ProcessStat::Ptr &ptr) -> unsigned long long{
-                return ptr->utime + ptr->stime + ptr->cutime + ptr->cstime;
-            };
-
-            constexpr auto diff = [add](const ProcessStat::Ptr& ptr1, const ProcessStat::Ptr& ptr2) {
-                return add(ptr2) - add(ptr1);
-            };
-
-            const int pid = it->second.second->pid;
-            const unsigned long totalCPUTime = cpu2.totalTime() - cpu1.totalTime();
-            const unsigned long idle = cpu2.idle - cpu1.idle;
-            // cpu的总体使用率
-            const unsigned long totalCPUUse = (totalCPUTime - idle) / totalCPUTime;
-
-            // 计算进程的使用时间
-            const unsigned long processTime = diff(it->second.first, it->second.second);
-            const double processCPUUse = processTime / totalCPUUse;
-
-            const long ReadIO{
-                it->second.second->ReadIO - it->second.first->ReadIO
-            };
-
-            const long WriteIO{
-                it->second.second->WriteIO - it->second.first->WriteIO
-            };
-
-            if (!it->second.second->name.empty()) {
-                list[time_][pid] = processCPUUse;
-
-                if (isDebug) {
-                    std::cout
-                        << time_ << ","
-                        << pid << ","
-                        << it->second.second->name << ","
-                        << processCPUUse << ","
-                        << it->second.second->VmRSS << ","
-                        << ReadIO << ","
-                        << WriteIO
-                        << std::endl;
-                }
-
-                stream << QString("%1,%2,%3,%4,%5,%6,%7")
-                              .arg(time_)
-                              .arg(pid)
-                              .arg(QString::fromStdString(it->second.second->name))
-                              .arg(processCPUUse)
-                              .arg(QString::number(it->second.second->VmRSS))
-                              .arg(ReadIO)
-                              .arg(WriteIO)
-                       << "\n";
-                stream.flush();
-            }
-        }
+        std::this_thread::sleep_for(std::chrono::seconds(interval));
     }
 
     return 0;

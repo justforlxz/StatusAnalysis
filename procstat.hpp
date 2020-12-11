@@ -28,7 +28,7 @@ public:
 
     unsigned long long totalTime() const
     {
-        return user + nice + system + idle + iowait + irq + softirq + stealstolen + guest;
+        return (user + nice + system + idle + iowait + irq + softirq + stealstolen + guest) / 100;
     }
 };
 
